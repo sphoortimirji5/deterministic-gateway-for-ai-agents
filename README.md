@@ -1,6 +1,13 @@
 # Resilient RCM Eligibility Gateway
 
-A fault-tolerant backend bridge designed to maintain system stability during external API outages—a critical requirement for AI agents interacting with non-deterministic healthcare platforms.
+### Mission-Critical Resilience for Healthcare AI
+The **Resilient RCM Eligibility Gateway** ensures consistent insurance verification for Healthcare AI Agents by shielding them from clearinghouse volatility.
+
+**Key Resilience Mechanisms:**
+*   **RxJS Layer**: Automatically handles transient network "blips" with 3x exponential retries (1s, 2s, 4s).
+*   **Opossum Layer**: Monitors for sustained failures and "trips" the circuit to prevent system exhaustion.
+*   **SQS Layer**: Spools failed or timed-out requests to AWS SQS for asynchronous processing, ensuring zero data loss.
+*   **Deterministic Reliability**: Provides a stable interface so AI workflows never stall due to downstream outages.
 
 ## Architecture Diagram
 
@@ -52,23 +59,26 @@ graph TD
     RES -.->|"AI-Ready Response"| AI
 ```
 
+## Resilience Engine: Opossum + RxJS
+
+### The Resilience Lifecycle
+1. **Request Ingress**: AI Agent sends a verification request.
+2. **Inner Layer (RxJS Retries)**: Handles transient "blips" with 3x exponential retries.
+3. **Outer Layer (Circuit Breaker)**: Monitors failure rates (50% threshold over 100+ calls) and "trips" the circuit to prevent system exhaustion.
+4. **Fallback Layer (SQS)**: Any request that fails all retries—or hits an open circuit—is spooled to **AWS SQS** for async processing.
+5. **Audit Trail (DLQ)**: Repeatedly failing requests are moved to an **audit-ready DLQ** for manual remediation.
+
 ## Production-Grade Features
 
-### Security and Compliance
-- **PHI Redaction**: Automatic scrubbing of patient information (e.g., `patient_name`) from all system logs to ensure HIPAA compliance.
+### Security & Compliance
+- **PHI Redaction**: Automatic scrubbing of patient information from all system logs to ensure HIPAA compliance.
 - **API Security**: Guarded by `x-api-key` and **Helmet** security headers.
-- **Input Validation**: Strict DTO validation using `class-validator` to prevent malformed injections.
+- **Input Validation**: Strict DTO validation to prevent malformed injections.
 
-### Reliability and Performance
-- **Circuit Breaker**: Instrumented with `opossum` to prevent system exhaustion during downstream outages. Configured with a default **100-call volume threshold** and **50% error threshold**.
-- **Exponential Backoff**: RxJS-powered intelligent retries (1s, 2s, 4s). *This is a standard industry practice to avoid overwhelming failing systems.*
-- **Rate Limiting**: Protects downstream clearinghouses from AI Agent "loops" or spikes (10 req/min limit).
+### Performance & AI Integration
+- **Rate Limiting**: Protects downstream systems from AI Agent "loops" or traffic spikes.
 - **Idempotency**: `x-idempotency-key` support via local cache to prevent duplicate RCM transactions.
-
-### Resilience Fallback & DLQ
-- **Asynchronous Spooling**: Failed or timed-out requests are automatically spooled to **AWS SQS**.
-- **Dead Letter Queue (DLQ)**: Requests that fail all retry attempts are moved to an **audit-ready DLQ** for manual remediation, ensuring zero data loss.
-- **AI-Optimized JSON**: Returns standardized responses allowing AI Agents to handle background states gracefully.
+- **AI-Optimized JSON**: Standardized responses allowing AI Agents to handle background states gracefully.
 
 ## Getting Started
 
